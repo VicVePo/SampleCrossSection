@@ -3,27 +3,33 @@
 #' Plans an expected event-count target for cross-sectional studies with a
 #' binary outcome using an events-per-predictor-parameter heuristic. Modified
 #' Poisson regression with robust variance may estimate prevalence ratios; the
-#' calculator does not fit that model or establish a sufficient EPV for it.
+#' calculator does not fit that model or establish a sufficient EPP for it.
 #'
 #' @param k Number of predictor coefficients, excluding the intercept
 #' @param prevalence Expected prevalence of the outcome (proportion between 0 and 1)
-#' @param EPV Chosen events-per-predictor-parameter target. Default is 20,
+#' @param EPP Preferred events-per-predictor-parameter target. If omitted,
+#'   uses EPV or the default of 20.
+#' @param EPV Compatibility name for the same target. If both EPP and EPV
+#'   are supplied, they must agree. Default is 20,
 #'   an operational planning criterion, not a universal threshold
 #' @param scenarios Logical. If TRUE, calculates sample sizes for multiple 
-#'   EPV values (10, 20, 30, 40, 50)
+#'   EPP values (10, 20, 30, 40, 50)
 #' @param language Language for messages: 'en' (English) or 'es' (Spanish). Default is 'en'
 #' @return List or data.frame with results. For single calculations,
-#'   n_parameters is k; n_variables is retained as a compatibility alias
+#'   n_parameters is k; target_EPP is the selected target. n_variables and
+#'   target_EPV are compatibility aliases. Scenario tables contain EPP and EPV.
 #' @details
-#' The conventional abbreviation EPV is retained, but its denominator is the
-#' number of predictor coefficients, excluding the intercept. A categorical
+#' EPP means events per predictor parameter. Its denominator is the number
+#' of predictor coefficients, excluding the intercept. EPV is retained as a
+#' compatibility argument and result field; VerifyEPV() is an alias of
+#' VerifyEPP(). A categorical
 #' predictor with c levels contributes c-1 coefficients when indicator coded.
 #' A single linear or prespecified transformed continuous term contributes one;
 #' polynomial, spline basis and interaction terms contribute their respective
 #' coefficients. Users specify k from the planned model matrix; the calculator
-#' does not construct the matrix. Use the same counting convention in VerifyEPV().
+#' does not construct the matrix. Use the same counting convention in VerifyEPP().
 #'
-#' EPV=20 is the default planning choice, not a universal adequacy threshold.
+#' EPP=20 is the default planning choice, not a universal adequacy threshold.
 #' The output satisfies an expected event-count criterion; no model is fitted
 #' and stability, precision, confidence-interval coverage and model assumptions
 #' are not assessed. The formulas do not adjust for overdispersion, clustering,
@@ -34,14 +40,14 @@
 #' ceiling(n/(1-m)), assuming the event proportion among analyzable participants
 #' matches the planning input. Account jointly for missingness and other losses
 #' without double counting. This inflation does not correct selection bias or
-#' quantify the information retained by multiple imputation. VerifyEPV() uses
+#' quantify the information retained by multiple imputation. VerifyEPP() uses
 #' events in the analytical sample and its predictor-parameter count.
 #'
 #' Specify probabilities on a 0-1 scale, for example 0.75 for 75 percent.
 #' Use comparable populations and outcome definitions; cumulative incidence
 #' and observed survival event proportions must match the observation horizon.
 #' Without reliable estimates, document plausible values and repeat calls across
-#' that range. scenarios=TRUE varies EPV, not the outcome frequency.
+#' that range. scenarios=TRUE varies EPP, not the outcome frequency.
 #'
 #' Model-specific assumptions still require separate assessment, including
 #' proportional hazards and censoring assumptions for Cox analyses. Recruitment
@@ -53,17 +59,17 @@
 #' @export
 #' @examples
 #' # Cross-sectional study of factors associated with diabetes (8% prevalence)
-#' SampleCrossSection(k = 12, prevalence = 0.08, EPV = 20)
+#' SampleCrossSection(k = 12, prevalence = 0.08, EPP = 20)
 #' 
 #' # Spanish version
-#' SampleCrossSection(k = 12, prevalence = 0.08, EPV = 20, language = 'es')
+#' SampleCrossSection(k = 12, prevalence = 0.08, EPP = 20, language = 'es')
 #' 
 #' # View multiple scenarios
 #' SampleCrossSection(k = 12, prevalence = 0.08, scenarios = TRUE)
 #'
 #' # Age, binary sex and four-level education require five coefficients.
-#' SampleCrossSection(k = 5, prevalence = 0.25, EPV = 20)
-SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, language = 'en') {
+#' SampleCrossSection(k = 5, prevalence = 0.25, EPP = 20)
+SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, language = 'en', EPP = NULL) {
   
   # Validate language
   if (!language %in% c('en', 'es')) {
@@ -71,6 +77,20 @@ SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, langu
   }
   
   # Error messages
+  if (!is.null(EPP)) {
+    if (length(EPP) != 1L || !is.numeric(EPP) || !is.finite(EPP) || EPP <= 0) {
+      stop(ifelse(language == 'es',
+                  'EPP debe ser un numero finito positivo',
+                  'EPP must be a finite positive number'))
+    }
+    if (!missing(EPV) && !isTRUE(all.equal(EPV, EPP))) {
+      stop(ifelse(language == 'es',
+                  'EPP y EPV deben coincidir si se especifican ambos',
+                  'EPP and EPV must agree when both are supplied'))
+    }
+    EPV <- EPP
+  }
+
   if (missing(k)) {
     stop(ifelse(language == 'es', 
                 'Debe especificar k (numero de parametros predictores sin intercepto)',
@@ -93,8 +113,8 @@ SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, langu
   }
   if (EPV <= 0) {
     stop(ifelse(language == 'es',
-                'EPV debe ser positivo',
-                'EPV must be positive'))
+                'EPP debe ser positivo',
+                'EPP must be positive'))
   }
   
   if (scenarios) {
@@ -110,25 +130,27 @@ SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, langu
       cat('\nESCENARIOS DE TAMA\u00d1O MUESTRAL - TRANSVERSAL ANALITICO\n')
       cat('Parametros predictores (k, sin intercepto):', k, '\n')
       cat('Prevalencia del outcome:', prevalence*100, '%\n\n')
-      print(res, row.names = FALSE)
-      cat('\nCriterio predeterminado: EPV = 20; no garantiza estabilidad\n')
-      cat('Nota: EPV se calcula con personas que tienen el outcome\n\n')
+      res$EPP <- res$EPV
+      print(res[c('EPP', names(res)[!names(res) %in% c('EPV', 'EPP')])], row.names = FALSE)
+      cat('\nCriterio predeterminado: EPP = 20; no garantiza estabilidad\n')
+      cat('Nota: EPP se calcula con personas que tienen el outcome\n\n')
     } else {
       names(res) <- c('EPV', 'events_needed', 'n_total')
       cat('\nSAMPLE SIZE SCENARIOS - CROSS-SECTIONAL ANALYTICAL\n')
       cat('Predictor parameters (k, excluding intercept):', k, '\n')
       cat('Outcome prevalence:', prevalence*100, '%\n\n')
-      print(res, row.names = FALSE)
-      cat('\nDefault planning criterion: EPV = 20; no guarantee of stability\n')
-      cat('Note: EPV is calculated with people who have the outcome\n\n')
+      res$EPP <- res$EPV
+      print(res[c('EPP', names(res)[!names(res) %in% c('EPV', 'EPP')])], row.names = FALSE)
+      cat('\nDefault planning criterion: EPP = 20; no guarantee of stability\n')
+      cat('Note: EPP is calculated with people who have the outcome\n\n')
     }
     return(invisible(res))
   }
   
   if (EPV < 10) {
     warning(ifelse(language == 'es',
-                   'EPV elegido < 10; evaluar precision y supuestos por separado',
-                   'Chosen EPV < 10; assess precision and assumptions separately'))
+                   'EPP elegido < 10; evaluar precision y supuestos por separado',
+                   'Chosen EPP < 10; assess precision and assumptions separately'))
   }
   
   # Calculations
@@ -153,7 +175,8 @@ SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, langu
     n_without_outcome = n_sin_outcome,
     n_total = n_total,
     language = language,
-    n_parameters = k
+    n_parameters = k,
+    target_EPP = EPV
   )
   class(resultados) <- c('SampleCrossSection', 'list')
   
@@ -162,14 +185,14 @@ SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, langu
     cat('\n=== TAMA\u00d1O MUESTRAL - TRANSVERSAL ANALITICO ===\n')
     cat('Modelo: Regresion de Poisson con varianza robusta (PR)\n')
     cat('Parametros predictores (k, sin intercepto):', k, '\n')
-    cat('EPV:', EPV, '\n')
+    cat('EPP:', EPV, '\n')
     cat('Prevalencia del outcome:', prevalence*100, '%\n')
     cat('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n')
     cat('Eventos necesarios (con outcome):', eventos_necesarios, '\n')
     cat('Personas sin outcome esperadas:', n_sin_outcome, '\n')
     cat('\n>>> TAMA\u00d1O TOTAL:', n_total, '<<<\n\n')
     
-    cat('EPV es un criterio de conteo de eventos; no garantiza precision ni estabilidad del modelo.\n\n')
+    cat('EPP es un criterio de conteo de eventos; no garantiza precision ni estabilidad del modelo.\n\n')
     
     if (prevalence < 0.05) {
       cat('\u2139\ufe0f  Nota: Prevalencia baja (<5%). Para mayor eficiencia\n')
@@ -179,14 +202,14 @@ SampleCrossSection <- function(k, prevalence, EPV = 20, scenarios = FALSE, langu
     cat('\n=== SAMPLE SIZE - CROSS-SECTIONAL ANALYTICAL ===\n')
     cat('Model: Poisson regression with robust variance (PR)\n')
     cat('Predictor parameters (k, excluding intercept):', k, '\n')
-    cat('EPV:', EPV, '\n')
+    cat('EPP:', EPV, '\n')
     cat('Outcome prevalence:', prevalence*100, '%\n')
     cat('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n')
     cat('Events needed (with outcome):', eventos_necesarios, '\n')
     cat('People without outcome expected:', n_sin_outcome, '\n')
     cat('\n>>> TOTAL SIZE:', n_total, '<<<\n\n')
     
-    cat('EPV is an event-count planning criterion; it does not guarantee precision or model stability.\n\n')
+    cat('EPP is an event-count planning criterion; it does not guarantee precision or model stability.\n\n')
     
     if (prevalence < 0.05) {
       cat('\u2139\ufe0f  Note: Low prevalence (<5%). For greater efficiency\n')
@@ -285,13 +308,13 @@ StudyLogistics <- function(n_final,
   return(invisible(resultados))
 }
 
-#' Post-Study EPV Verification for Cross-Sectional Studies
+#' Post-Study EPP Verification for Cross-Sectional Studies
 #' 
 #' @param n_final Final sample obtained
 #' @param n_with_outcome Participants with the observed outcome
 #' @param k Number of predictor coefficients, excluding the intercept
 #' @param language Language for messages: 'en' (English) or 'es' (Spanish). Default is 'en'
-#' @return List with observed EPV
+#' @return List with observed EPP; EPV is retained as a compatibility alias
 #' @details
 #' k is the number of predictor coefficients excluding the intercept, using the
 #' same convention as the initial sample-size calculation. Count c-1 indicator
@@ -300,9 +323,9 @@ StudyLogistics <- function(n_final,
 #' Use events from the analytical sample after the planned missing-data handling.
 #' This function reports the observed event-per-parameter ratio. It does not fit
 #' a regression model or assess stability, precision or model assumptions, and
-#' it does not certify adequacy from a fixed EPV threshold.
+#' it does not certify adequacy from a fixed EPP threshold.
 #' @export
-VerifyEPV <- function(n_final, n_with_outcome, k, language = 'en') {
+VerifyEPP <- function(n_final, n_with_outcome, k, language = 'en') {
   
   if (!language %in% c('en', 'es')) {
     stop('language must be "en" or "es"')
@@ -334,23 +357,23 @@ VerifyEPV <- function(n_final, n_with_outcome, k, language = 'en') {
   prevalence_observed <- n_with_outcome / n_final
   
   if (language == 'es') {
-    cat('\n=== VERIFICACI\u00d3N EPV POST-ESTUDIO ===\n')
+    cat('\n=== VERIFICACI\u00d3N EPP POST-ESTUDIO ===\n')
     cat('Muestra final:', n_final, '\n')
     cat('Participantes con outcome:', n_with_outcome, '\n')
     cat('Parametros predictores en modelo (sin intercepto):', k, '\n')
     cat('Prevalencia observada:', round(prevalence_observed*100, 2), '%\n')
-    cat('\n>>> EPV OBSERVADO:', round(EPV_observed, 2), '<<<\n\n')
+    cat('\n>>> EPP OBSERVADO:', round(EPV_observed, 2), '<<<\n\n')
     
-    cat('El EPV observado resume eventos por parametro; no evalua estabilidad, precision ni adecuacion del modelo.\n\n')
+    cat('El EPP observado resume eventos por parametro; no evalua estabilidad, precision ni adecuacion del modelo.\n\n')
   } else {
-    cat('\n=== POST-STUDY EPV VERIFICATION ===\n')
+    cat('\n=== POST-STUDY EPP VERIFICATION ===\n')
     cat('Final sample:', n_final, '\n')
     cat('Participants with outcome:', n_with_outcome, '\n')
     cat('Predictor parameters in model (excluding intercept):', k, '\n')
     cat('Observed prevalence:', round(prevalence_observed*100, 2), '%\n')
-    cat('\n>>> OBSERVED EPV:', round(EPV_observed, 2), '<<<\n\n')
+    cat('\n>>> OBSERVED EPP:', round(EPV_observed, 2), '<<<\n\n')
     
-    cat('Observed EPV summarizes events per parameter; it does not assess stability, precision or model adequacy.\n\n')
+    cat('Observed EPP summarizes events per parameter; it does not assess stability, precision or model adequacy.\n\n')
   }
   
   return(invisible(list(
@@ -359,7 +382,8 @@ VerifyEPV <- function(n_final, n_with_outcome, k, language = 'en') {
     k = k,
     EPV = EPV_observed,
     prevalence = prevalence_observed,
-    language = language
+    language = language,
+    EPP = EPV_observed
   )))
 }
 
@@ -387,3 +411,7 @@ print.StudyLogistics <- function(x, ...) {
   invisible(x)
 }
 
+
+#' @rdname VerifyEPP
+#' @export
+VerifyEPV <- VerifyEPP

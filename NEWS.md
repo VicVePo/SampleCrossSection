@@ -1,3 +1,11 @@
+# Version 0.1.2
+
+- Use EPP (events per predictor parameter) in messages, help and examples.
+- Add the preferred EPP argument while preserving existing positional arguments and EPV calls.
+- Export VerifyEPP and retain VerifyEPV as an equivalent compatibility alias.
+- Add target_EPP and observed EPP result fields and an EPP scenario column without removing legacy fields.
+- Reject conflicting EPP and EPV inputs. Preserve all sample-size and logistical calculations.
+
 # Version 0.1.1
 
 - Define k as predictor coefficients excluding the intercept, consistently in planning and VerifyEPV.

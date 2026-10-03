@@ -1,12 +1,12 @@
 Package: SampleCrossSection
 Title: Sample Size Calculation for Cross-Sectional Analytical Studies
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: 
     person("Victor J.", "Vera-Ponce", email = "victor_jvp@hotmail.com", role = c("aut", "cre"))
 Description: Implements an events-per-predictor-parameter planning heuristic
     for multivariable association studies, with logistical planning and observed
     event-count summaries. The denominator excludes the intercept and includes
-    all predictor coefficients. A default EPV of 20 is an operational choice,
+    all predictor coefficients. A default EPP of 20 is an operational choice,
     not a guarantee of model stability. No regression model is fitted.
 License: MIT + file LICENSE
 Encoding: UTF-8

@@ -1,4 +1,4 @@
-# Version 0.1.1: predictor-parameter counting example.
+# Version 0.1.2: predictor-parameter counting example.
 # This grid defines coding; it is not a patient dataset.
 design <- expand.grid(age=c(30,40,50,60,70),
                       sex=factor(c("F","M")),
@@ -6,8 +6,8 @@ design <- expand.grid(age=c(30,40,50,60,70),
 mm <- stats::model.matrix(~ age + sex + education, data=design)
 k <- sum(colnames(mm) != "(Intercept)")
 stopifnot(k == 5L, qr(mm)$rank == ncol(mm))
-planned <- SampleCrossSection::SampleCrossSection(k=k, EPV=20, prevalence=0.25)
-SampleCrossSection::VerifyEPV(n_final=planned$n_total,
+planned <- SampleCrossSection::SampleCrossSection(k=k, EPP=20, prevalence=0.25)
+SampleCrossSection::VerifyEPP(n_final=planned$n_total,
                        n_with_outcome=planned$events_needed, k=k)
 
 # A log transformation uses one coefficient; nonlinear terms can use more.
