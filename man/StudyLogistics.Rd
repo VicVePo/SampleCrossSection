@@ -32,3 +32,10 @@ List with logistics
 \description{
 Logistical Planning for Cross-Sectional Study
 }
+\details{
+Enter proportions on a 0-1 scale: 75 percent eligibility is 0.75 and
+12 percent refusal or loss is 0.12. Required final counts denote the
+analytical target. Account jointly for anticipated incomplete-case
+exclusions and other losses without double counting. These logistical
+calculations assess resource requirements, not model adequacy.
+}

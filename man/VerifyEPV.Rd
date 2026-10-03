@@ -11,7 +11,7 @@ VerifyEPV(n_final, n_with_outcome, k, language = "en")
 
 \item{n_with_outcome}{Participants with the observed outcome}
 
-\item{k}{Number of variables in the model}
+\item{k}{Number of predictor coefficients, excluding the intercept}
 
 \item{language}{Language for messages: 'en' (English) or 'es' (Spanish). Default is 'en'}
 }
@@ -20,4 +20,14 @@ List with observed EPV
 }
 \description{
 Post-Study EPV Verification for Cross-Sectional Studies
+}
+\details{
+k is the number of predictor coefficients excluding the intercept, using the
+same convention as the initial sample-size calculation. Count c-1 indicator
+coefficients for a categorical predictor with c levels and count all
+polynomial, spline and interaction coefficients included in the model.
+Use events from the analytical sample after the planned missing-data handling.
+This function reports the observed event-per-parameter ratio. It does not fit
+a regression model or assess stability, precision or model assumptions, and
+it does not certify adequacy from a fixed EPV threshold.
 }
